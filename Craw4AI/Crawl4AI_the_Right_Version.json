@@ -1,0 +1,315 @@
+{
+  "name": "Crawl4AI the Right Version",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        -20
+      ],
+      "id": "1077c7c7-5561-4824-9589-0da8cec45f8c",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11235/crawl",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"urls\": [\n    \"{{ $json.Lien }}\"\n  ],\n  \"crawler_config\": {\n    \"type\": \"CrawlerRunConfig\",\n    \"params\": {\n      \"scraping_strategy\": {\n        \"type\": \"WebScrapingStrategy\",\n        \"params\": {}\n      },\n      \"exclude_social_media_domains\": [\n        \"facebook.com\",\n        \"twitter.com\",\n        \"x.com\",\n        \"linkedin.com\",\n        \"instagram.com\",\n        \"pinterest.com\",\n        \"tiktok.com\",\n        \"snapchat.com\",\n        \"reddit.com\"\n      ],\n      \"stream\": true\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1060,
+        -40
+      ],
+      "id": "fbf94ac4-db9c-4724-9df3-fbc11f87bcb6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/external-files/docmost/{{ $('Synthetize ALL').item.json.Title }}.md",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        -40
+      ],
+      "id": "57211c19-14f4-4d83-8b5f-6639300abf06",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "Markdown",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        -40
+      ],
+      "id": "692dced6-6283-4872-bfed-37255f006a9c",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "cddd9818-c8cc-42bc-9c8f-ecc3efd9f597",
+      "name": "XML",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "urlset.url",
+        "options": {}
+      },
+      "id": "41d1248b-6e26-4357-a58a-7170319d3921",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://docmost.com/docs/sitemap.xml",
+        "options": {}
+      },
+      "id": "480c08c6-66fa-49f3-8a38-bb1b0f811b3e",
+      "name": "HTTP Request1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        720,
+        -20
+      ],
+      "id": "63764227-7c69-415d-b291-deb75cadca9a",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "db290c53-57b7-4016-bce0-99b85c897ab6",
+              "name": "Markdown",
+              "value": "={{ $json.results[0].markdown.raw_markdown }}",
+              "type": "string"
+            },
+            {
+              "id": "99ad82f3-05d7-4c58-a44d-1c288f032c91",
+              "name": "Title",
+              "value": "={{ (() => {\n  const url = $('Loop Over Items').item.json.Title;\n\n  // Obtenir le nom de domaine principal (sans www, sans .com/.fr...)\n  const domainMatch = url.match(/^https?:\\/\\/(?:www\\.)?([^\\/]+)/);\n  let domain = domainMatch ? domainMatch[1] : '';\n  domain = domain.split('.').slice(0, -1).join('-');\n\n  // Dernier segment du path\n  const pathParts = url.split('/').filter(p => p && !p.startsWith('http'));\n  let lastSegment = pathParts.length ? pathParts[pathParts.length - 1] : '';\n\n  // Slugify : tout en minuscule, tirets à la place des underscores/espaces, sans accents\n  const slugify = str => str\n    .toLowerCase()\n    .normalize(\"NFD\").replace(/[\\u0300-\\u036f]/g, \"\") // accents\n    .replace(/[^a-z0-9]/g, '-') // tout ce qui est pas lettre ou chiffre → tiret\n    .replace(/-+/g, '-') // éviter les tirets doubles\n    .replace(/^-|-$/g, ''); // enlever tirets au début/fin\n\n  return `${slugify(domain)}-${slugify(lastSegment)}`;\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        -40
+      ],
+      "id": "abf47f33-1be9-4827-a7bd-98d5ca0c1be6",
+      "name": "Synthetize ALL"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3f99145-53ce-402c-ace5-63286547d16c",
+              "name": "Lien",
+              "value": "={{ $json.loc }}",
+              "type": "string"
+            },
+            {
+              "id": "e9ed4562-e8dd-44c5-a7dd-60efb59c2d2e",
+              "name": "Title",
+              "value": "={{ $json.loc }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        -20
+      ],
+      "id": "d6be1c67-8340-489b-92ed-1ee5c66ed47e",
+      "name": "Add Right name"
+    },
+    {
+      "parameters": {
+        "content": "# n8n Workflow Explanation: Website Content Scraper\n\n##  workflow Overview\n\nThis workflow automates the process of scraping all pages from a website's sitemap, extracting the main content of each page, and saving it as a structured Markdown file on the local disk. It's an end-to-end pipeline for content ingestion.\n\n---\n\n## Step-by-Step Breakdown\n\n### 1. `When clicking ‘Execute workflow’ (Manual Trigger)`\n\n*   **Action:** This is the entry point. The workflow starts when a user manually clicks the \"Execute Workflow\" button.\n*   **Purpose:** To initiate the entire scraping process on demand.\n\n### 2. `HTTP Request1`\n\n*   **Action:** Sends an HTTP `GET` request to the specified URL.\n*   **URL:** `https://docmost.com/docs/sitemap.xml`\n*   **Purpose:** To fetch the website's sitemap, which contains a list of all discoverable URLs.\n\n### 3. `XML`\n\n*   **Action:** Parses the XML data received from the previous `HTTP Request1` node.\n*   **Purpose:** To convert the raw XML sitemap into a structured JSON format, making it easy to access the list of URLs.\n\n### 4. `Split Out`\n\n*   **Action:** Takes the array of URLs from the parsed sitemap and splits it into individual items.\n*   **Field to Split:** `urlset.url`\n*   **Purpose:** To process each URL one by one in the subsequent steps, rather than handling them all at once.\n\n### 5. `Add Right name` (Set Node)\n\n*   **Action:** Creates two new fields, `Lien` and `Title`, for each item. Both are populated with the URL from the sitemap.\n*   **Value:** `{{ $json.loc }}`\n*   **Purpose:** To prepare and rename the data for clarity before it enters the main processing loop.\n\n### 6. `Loop Over Items`\n\n*   **Action:** Iterates through each item received from the `Add Right name` node. It is configured to run in batches of 1, effectively processing one URL at a time.\n*   **Purpose:** To execute the core scraping and saving logic for every single URL found in the sitemap.\n\n---\n\n### Inside the Loop (Executed for Each URL)\n\nThe following nodes run once for every item processed by the `Loop Over Items` node.\n\n#### 7. `HTTP Request`\n\n*   **Action:** Sends an HTTP `POST` request to a local crawling service.\n*   **URL:** `http://host.docker.internal:11235/crawl`\n*   **Body:** It sends the URL to be scraped (`{{ $json.Lien }}`) along with a configuration for the crawler.\n    ```json\n    {\n      \"urls\": [\"{{ $json.Lien }}\"],\n      \"crawler_config\": {\n        \"type\": \"CrawlerRunConfig\",\n        \"params\": {\n          \"scraping_strategy\": { \"type\": \"WebScrapingStrategy\" },\n          \"stream\": true\n        }\n      }\n    }\n    ```\n*   **Purpose:** To delegate the complex task of web scraping to a specialized local service, which extracts the page's content.\n\n#### 8. `Synthetize ALL` (Set Node)\n\n*   **Action:** Processes the response from the crawler and sets two new fields.\n    1.  **`Markdown`**: Extracts the raw markdown content from the crawler's result.\n        *   **Value:** `{{ $json.results[0].markdown.raw_markdown }}`\n    2.  **`Title`**: Generates a clean, URL-safe filename from the original URL using a JavaScript expression. For example, `https://docmost.com/docs/getting-started` becomes `docmost-getting-started`.\n*   **Purpose:** To structure the scraped data and create a standardized filename for the output file.\n\n#### 9. `Convert to File`\n\n*   **Action:** Converts the text content of the `Markdown` field into a binary file format.\n*   **Purpose:** A necessary technical step to prepare the data to be written to the filesystem.\n\n#### 10. `Read/Write Files from Disk`\n\n*   **Action:** Writes the binary file data from the previous step to the disk.\n*   **File Name:** Uses the `Title` field to construct a dynamic file path.\n    *   **Path:** `=/external-files/docmost/{{ $('Synthetize ALL').item.json.Title }}.md`\n*   **Purpose:** To save the scraped content as a Markdown file in a designated directory. The loop then continues with the next URL until all are processed.\n\n---\n\n## Use Cases & Requirements\n\n### What is it for?\n\n*   **Knowledge Base Creation:** Ingesting website content into a vector database to power a Retrieval-Augmented Generation (RAG) system or a custom AI assistant.\n*   **Content Archiving:** Creating a complete, offline backup of a documentation site or blog.\n*   **Data Migration:** Scraping content from one platform to be transformed and imported into another.\n\n### To use this workflow, you need:\n\n1.  A running **n8n instance**.\n2.  A **local web crawling service** accessible at `http://host.docker.internal:11235`. This is a custom dependency and not a standard n8n feature.\n3.  If using Docker, a **mounted volume** that maps a local directory to `/external-files/` inside the n8n container, with write permissions.",
+        "height": 2620,
+        "width": 1140
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1660,
+        -1040
+      ],
+      "id": "bb11ad21-8cef-4085-9916-b37320b18222",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Synthetize ALL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Add Right name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthetize ALL": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Right name": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "318a4e48-4560-4d0e-a51d-0e96f9f705c0",
+  "meta": {
+    "instanceId": "58b1b6a89673c3bad369f29f6c355af95d72d1dd216e92de6c51b3cd763b729b"
+  },
+  "id": "sLSthFrVq9iJFFqG",
+  "tags": []
+}
